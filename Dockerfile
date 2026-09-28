@@ -2,11 +2,8 @@
 FROM node:22-alpine AS build
 
 ARG COBALT_REF=main
-ARG WEB_HOST
-ARG WEB_DEFAULT_API
-
-ENV WEB_HOST=$WEB_HOST
-ENV WEB_DEFAULT_API=$WEB_DEFAULT_API
+ENV WEB_DEFAULT_API=__WEB_DEFAULT_API__
+ENV WEB_HOST=__WEB_HOST__
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
 
@@ -19,12 +16,11 @@ RUN git clone --depth 1 https://github.com/imputnet/cobalt.git . \
  && git checkout --force "${COBALT_REF}"
 RUN mkdir -p .git/logs \
  && echo "0000000000000000000000000000000000000000 $(git rev-parse HEAD)" > .git/logs/HEAD
-
 RUN pnpm install --frozen-lockfile --filter=./web
 RUN pnpm --filter=./web build
 
 FROM caddy:2-alpine
-COPY --from=build /src/web/build /usr/share/caddy
+COPY --from=build /src/web/build /templates
 RUN printf '%s\n' \
   ':80 {' \
   '  root * /usr/share/caddy' \
@@ -33,4 +29,24 @@ RUN printf '%s\n' \
   '  file_server' \
   '}' \
   > /etc/caddy/Caddyfile
+COPY <<'EOF' /entrypoint.sh
+#!/bin/sh
+set -eu
+: "${WEB_DEFAULT_API:?set in .env}"
+: "${WEB_HOST:?set in .env}"
+case "$WEB_DEFAULT_API" in
+  */) ;;
+  *) WEB_DEFAULT_API="${WEB_DEFAULT_API}/" ;;
+esac
+rm -rf /usr/share/caddy
+cp -a /templates /usr/share/caddy
+find /usr/share/caddy -type f \( -name '*.js' -o -name '*.html' -o -name '*.json' -o -name '*.xml' \) \
+  -exec sed -i \
+    -e "s|__WEB_DEFAULT_API__|${WEB_DEFAULT_API}|g" \
+    -e "s|__WEB_HOST__|${WEB_HOST}|g" \
+    {} +
+exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+EOF
+RUN chmod +x /entrypoint.sh
 EXPOSE 80
+ENTRYPOINT ["/entrypoint.sh"]
