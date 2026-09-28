@@ -1,0 +1,69 @@
+name: Cobalt Web ARM64 Builder
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - Dockerfile
+      - .github/workflows/build.yml
+  schedule:
+    - cron: "0 0 * * *"
+      timezone: "Europe/London"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Latest official web/ commit
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA=$(gh api "repos/imputnet/cobalt/commits?path=web&sha=main&per_page=1" --jq '.[0].sha')
+          SHORT="${SHA:0:12}"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
+          echo "web sha=$SHA"
+
+      - name: Check if this source already exists in registry
+        id: image-exists
+        run: |
+          TAG="src-${{ steps.version.outputs.short }}"
+          if docker manifest inspect "ghcr.io/${{ github.repository_owner }}/cobalt-web:${TAG}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "src-$TAG already exists — skipping build"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push (if new source)
+        if: steps.image-exists.outputs.exists == 'false' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/cobalt-web:latest
+            ghcr.io/${{ github.repository_owner }}/cobalt-web:src-${{ steps.version.outputs.short }}
+          build-args: |
+            COBALT_REF=${{ steps.version.outputs.sha }}
+            WEB_HOST=${{ vars.WEB_HOST }}
+            WEB_DEFAULT_API=${{ vars.WEB_DEFAULT_API }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
