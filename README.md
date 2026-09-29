@@ -5,8 +5,8 @@ ARM64 Docker image of the official [imputnet/cobalt](https://github.com/imputnet
 ## Image
 
 ```
-ghcr.io/<your-github-user>/cobalt-web:latest
-ghcr.io/<your-github-user>/cobalt-web:src-<12-char-sha>
+ghcr.io/lrnd1/cobalt-web:latest
+ghcr.io/lrnd1/cobalt-web:src-<12-char-sha>
 ```
 
 - Platform: `linux/arm64` only
@@ -18,7 +18,7 @@ ghcr.io/<your-github-user>/cobalt-web:src-<12-char-sha>
 ```yaml
 services:
   cobalt-web:
-    image: ghcr.io/<your-github-user>/cobalt-web:latest
+    image: ghcr.io/lrnd1/cobalt-web:latest
     container_name: cobalt-web
     restart: unless-stopped
     ports:
