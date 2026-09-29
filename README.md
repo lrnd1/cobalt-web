@@ -2,8 +2,6 @@
 
 ARM64 Docker image of the official [imputnet/cobalt](https://github.com/imputnet/cobalt) **web** UI. The official Cobalt image is API-only; this repo builds the static frontend and serves it with Caddy.
 
-URLs are **not** baked in at build time. Set them when you run the container.
-
 ## Image
 
 ```
@@ -51,11 +49,9 @@ Skip logic: if `src-<sha>` already exists on GHCR, the scheduled workflow does n
 ## Actions
 
 Workflow: `.github/workflows/build.yml`  
-Schedule: `0 0 * * *` (`Europe/London` if your runner supports `timezone` on `schedule`).
-
-No GitHub Actions variables are required for URLs.
+Schedule: `0 20 * * *`
 
 ## License
 
 - This repo’s Dockerfile / workflow: use as you like.
-- Cobalt web source: [CC-BY-NC-SA-4.0](https://github.com/imputnet/cobalt/blob/main/web/LICENSE). Branding stays with imput. Non-commercial unmodified hosting is allowed by their README.
+- Cobalt web source: [CC-BY-NC-SA-4.0](https://github.com/imputnet/cobalt/blob/main/web/LICENSE).
