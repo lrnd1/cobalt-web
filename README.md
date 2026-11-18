@@ -6,7 +6,6 @@ ARM64 Docker image of the official [imputnet/cobalt](https://github.com/imputnet
 
 ```
 ghcr.io/lrnd1/cobalt-web:latest
-
 ```
 
 - Platform: `linux/arm64` only
